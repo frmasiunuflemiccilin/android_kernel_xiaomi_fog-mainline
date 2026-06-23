@@ -724,6 +724,9 @@ choice
 	config DEFAULT_VENO
 		bool "Veno" if TCP_CONG_VENO=y
 
+    config DEFAULT_BBRPLUS
+        bool "BBRplus" if TCP_CONG_BBRPLUS=y
+
 	config DEFAULT_WESTWOOD
 		bool "Westwood" if TCP_CONG_WESTWOOD=y
 
@@ -749,6 +752,7 @@ config TCP_CONG_CUBIC
 
 config DEFAULT_TCP_CONG
 	string
+	default "bbrplus" if DEFAULT_BBRPLUS
 	default "bic" if DEFAULT_BIC
 	default "cubic" if DEFAULT_CUBIC
 	default "htcp" if DEFAULT_HTCP
