@@ -691,6 +691,14 @@ config TCP_CONG_BBR
 	bufferbloat, policers, or AQM schemes that do not provide a delay
 	signal. It requires the fq ("Fair Queue") pacing packet scheduler.
 
+config TCP_CONG_BBRPLUS
+	tristate "BBRplus TCP congestion control"
+	default y
+	---help---
+	  BBRplus is an enhanced version of BBR congestion control algorithm.
+	  It modifies BBRv1's behavior to achieve better throughput and lower
+	  packet loss on unstable networks.
+	  
 choice
 	prompt "Default TCP congestion control"
 	default DEFAULT_CUBIC
