@@ -55,8 +55,8 @@ export KBUILD_NM=llvm-nm
 export KBUILD_OBJDUMP=llvm-objdump
 export HOSTCC=clang
 export HOSTCXX=clang++
-export KBUILD_BUILD_USER="Filia-Lunae"
-export KBUILD_BUILD_HOST="Arch-ARM64"
+export KBUILD_BUILD_USER="Filia"
+export KBUILD_BUILD_HOST="Quantum-world⚛"
 
 mkdir -p "$OUT_DIR"
 
