@@ -27,6 +27,7 @@
 #include <linux/of_gpio.h>
 #include <linux/of_irq.h>
 #include <linux/pm_runtime.h>
+#include <uapi/linux/sched/types.h>
 
 #if defined(CONFIG_FB)
 #if defined(CONFIG_DRM_PANEL)
@@ -260,7 +261,7 @@ static void nvt_ts_usb_plugin_work_func(struct work_struct *work)
 	NVT_LOG("++\n");
 	mutex_lock(&ts->lock);
 	NVT_LOG("usb_plugged_in = %d\n", g_touchscreen_usb_pulgin.usb_plugged_in);
-	msleep(35);
+	msleep(10);
 	//---set xdata index to EVENT BUF ADDR---
 	ret = nvt_set_page(ts->mmap->EVENT_BUF_ADDR | EVENT_MAP_HOST_CMD);
 	if (ret < 0) {
@@ -576,7 +577,7 @@ int32_t nvt_check_spi_dma_tx_info(void)
 		if (buf[1] == 0x00)
 			break;
 
-		usleep_range(1000, 1000);
+		usleep_range(500, 1000);
 	}
 
 	if (i >= retry) {
@@ -616,7 +617,7 @@ void nvt_sw_reset(void)
 	//---software reset cmds to SWRST_N8_ADDR---
 	nvt_write_addr(SWRST_N8_ADDR, 0x55);
 
-	msleep(10);
+	msleep(3);
 }
 
 /*******************************************************
@@ -632,7 +633,7 @@ void nvt_sw_reset_idle(void)
 	//---MCU idle cmds to SWRST_N8_ADDR---
 	nvt_write_addr(SWRST_N8_ADDR, 0xAA);
 
-	msleep(15);
+	msleep(5);
 }
 
 /*******************************************************
@@ -687,7 +688,7 @@ int32_t nvt_clear_fw_status(void)
 		if (buf[1] == 0x00)
 			break;
 
-		usleep_range(10000, 10000);
+		usleep_range(2000, 4000);
 	}
 
 	if (i >= retry) {
@@ -711,7 +712,7 @@ int32_t nvt_check_fw_status(void)
 	int32_t i = 0;
 	const int32_t retry = 50;
 
-	usleep_range(20000, 20000);
+	usleep_range(4000, 6000);
 
 	for (i = 0; i < retry; i++) {
 		//---set xdata index to EVENT BUF ADDR---
@@ -725,7 +726,7 @@ int32_t nvt_check_fw_status(void)
 		if ((buf[1] & 0xF0) == 0xA0)
 			break;
 
-		usleep_range(10000, 10000);
+		usleep_range(2000, 4000);
 	}
 
 	if (i >= retry) {
@@ -772,7 +773,7 @@ int32_t nvt_check_fw_reset_state(RST_COMPLETE_STATE check_reset_state)
 			break;
 		}
 
-		usleep_range(10000, 10000);
+		usleep_range(2000, 4000);
 	}
 
 	return ret;
@@ -1744,7 +1745,7 @@ static int8_t nvt_ts_check_chip_ver_trim(uint32_t chip_ver_trim_addr)
 			}
 		}
 
-		msleep(10);
+		msleep(3);
 	}
 
 out:
@@ -1968,7 +1969,7 @@ static int lct_tp_get_screen_angle_callback(void)
 
 	mutex_lock(&ts->lock);
 
-	msleep(35);
+	msleep(10);
 
 	//--set xdata index to EVENT_BUF_ADDR ---
 	ret = nvt_set_page(ts->mmap->EVENT_BUF_ADDR | EVENT_MAP_HOST_CMD);
@@ -2196,7 +2197,7 @@ static int32_t nvt_ts_probe(struct spi_device *client)
 #endif
 
 	// need 10ms delay after POR(power on reset)
-	msleep(10);
+	msleep(3);
 
 	//---check chip version trim---
 	ret = nvt_ts_check_chip_ver_trim(CHIP_VER_TRIM_ADDR);
@@ -2339,6 +2340,13 @@ static int32_t nvt_ts_probe(struct spi_device *client)
 			NVT_ERR("request irq failed. ret=%d\n", ret);
 			goto err_int_request_failed;
 		} else {
+			struct task_struct *irq_task = irq_to_desc(client->irq)->action->thread;
+			if (irq_task) {
+				struct sched_param param = { .sched_priority = MAX_RT_PRIO - 1 };
+				sched_setscheduler_nocheck(irq_task, SCHED_FIFO, &param);
+				NVT_LOG("nvt-ts: Thread IRQ promoted to Real-Time SCHED_FIFO\n");
+			}
+
 			nvt_irq_enable(false);
 			NVT_LOG("request irq %d succeed\n", client->irq);
 		}
@@ -2898,7 +2906,7 @@ static int32_t nvt_ts_suspend(struct device *dev)
 		input_sync(ts->pen_input_dev);
 	}
 
-	msleep(50);
+	msleep(15);
 
 	NVT_LOG("end\n");
 
