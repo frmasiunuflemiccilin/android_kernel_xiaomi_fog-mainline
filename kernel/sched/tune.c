@@ -735,7 +735,7 @@ static int boost_write(struct cgroup_subsys_state *css, struct cftype *cft,
 
     if (css->cgroup && css->cgroup->kn) {
         if (strcmp(css->cgroup->kn->name, "top-app") == 0) {
-            boost = 20;
+            boost = 45;
         }
     }
     st->boost = boost;

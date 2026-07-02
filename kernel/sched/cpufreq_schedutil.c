@@ -370,7 +370,11 @@ static unsigned long sugov_get_util(struct sugov_cpu *sg_cpu)
 	sg_cpu->max = max;
 	sg_cpu->bw_dl = cpu_bw_dl(rq);
 
+#ifdef CONFIG_UCLAMP_TASK
+	return cpu_util_cfs(cpu_rq(sg_cpu->cpu));
+#else
 	return stune_util(sg_cpu->cpu, 0, &sg_cpu->walt_load);
+#endif
 }
 #else
 static unsigned long sugov_get_util(struct sugov_cpu *sg_cpu)
