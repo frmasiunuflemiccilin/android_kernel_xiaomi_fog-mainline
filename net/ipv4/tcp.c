@@ -3974,13 +3974,13 @@ void __init tcp_init(void)
 	max_wshare = min(4UL*1024*1024, limit);
 	max_rshare = min(6UL*1024*1024, limit);
 
-	init_net.ipv4.sysctl_tcp_wmem[0] = SK_MEM_QUANTUM;
-	init_net.ipv4.sysctl_tcp_wmem[1] = 16*1024;
-	init_net.ipv4.sysctl_tcp_wmem[2] = max(64*1024, max_wshare);
+	init_net.ipv4.sysctl_tcp_wmem[0] = 4096;
+	init_net.ipv4.sysctl_tcp_wmem[1] = 16384;
+	init_net.ipv4.sysctl_tcp_wmem[2] = 16777216;
 
-	init_net.ipv4.sysctl_tcp_rmem[0] = SK_MEM_QUANTUM;
-	init_net.ipv4.sysctl_tcp_rmem[1] = 131072;
-	init_net.ipv4.sysctl_tcp_rmem[2] = max(131072, max_rshare);
+	init_net.ipv4.sysctl_tcp_rmem[0] = 4096;
+	init_net.ipv4.sysctl_tcp_rmem[1] = 262144;
+	init_net.ipv4.sysctl_tcp_rmem[2] = 16777216;
 
 	pr_info("Hash tables configured (established %u bind %u)\n",
 		tcp_hashinfo.ehash_mask + 1, tcp_hashinfo.bhash_size);

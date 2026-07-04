@@ -219,7 +219,7 @@
 	"gEnablePowerSaveOffload", \
 	0, \
 	5, \
-	2, \
+	0, \
 	CFG_VALUE_OR_DEFAULT, \
 	"Enable Power Save Offload")
 
