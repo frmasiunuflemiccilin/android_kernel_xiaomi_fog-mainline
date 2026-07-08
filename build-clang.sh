@@ -11,7 +11,7 @@ TC_DIR="$(pwd)/../weebx-clang"
 export PATH="$TC_DIR/bin:$PATH"
 
 export USE_CCACHE=1
-export CCACHE_DIR="/media/filia/DiskB/.ccache"
+export CCACHE_DIR="/home/filia/.cache/ccache"
 export CCACHE_MAXSIZE="30G"
 ccache -M $CCACHE_MAXSIZE >/dev/null 2>&1
 
@@ -25,8 +25,8 @@ mkdir -p out
 echo -e "\nGenerating defconfig: $DEFCONFIG"
 make O=out ARCH=arm64 $DEFCONFIG
 
-echo -e "\nStarting compilation on 4 Cores (-j4) via LLVM + Ccache..."
-make -j4 O=out \
+echo -e "\nStarting compilation on $(nproc) Cores (-j$(nproc)) via LLVM + Ccache..."
+make -j$(nproc) O=out \
      ARCH=arm64 \
      SUBARCH=arm64 \
      LLVM=1 \
