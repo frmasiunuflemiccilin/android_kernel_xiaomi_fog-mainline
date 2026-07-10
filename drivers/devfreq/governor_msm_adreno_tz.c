@@ -418,7 +418,7 @@ static int tz_get_target_freq(struct devfreq *devfreq, unsigned long *freq)
 		scm_data[1] = priv->bin.total_time;
 
     /* MOD START: Inflate busy_time by 20% to prevent drops */
-unsigned long fake_busy = (priv->bin.busy_time * 120) / 100;
+unsigned long fake_busy = (priv->bin.busy_time * 110) / 100;
 if (fake_busy > priv->bin.total_time)
     fake_busy = priv->bin.total_time;
 scm_data[2] = fake_busy;
