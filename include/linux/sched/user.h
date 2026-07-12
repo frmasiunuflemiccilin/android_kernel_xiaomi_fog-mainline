@@ -46,7 +46,6 @@ struct user_struct {
 
 	/* Miscellaneous per-user rate limit */
 	struct ratelimit_state ratelimit;
-
 };
 
 extern int uids_sysfs_init(void);
