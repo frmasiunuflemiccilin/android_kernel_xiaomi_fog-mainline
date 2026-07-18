@@ -2,8 +2,8 @@
 # script BY: anomaly_arc
 SECONDS=0 
 DEFCONFIG="vendor/fog-perf_defconfig"
-export KBUILD_BUILD_USER="Filia"
-export KBUILD_BUILD_HOST="Quantum-world⚛️"
+export KBUILD_BUILD_USER="Yúzé𓂀"
+export KBUILD_BUILD_HOST="Local"
 export ARCH=arm64
 export SUBARCH=arm64
 
