@@ -1,0 +1,41 @@
+name: Build KernelSU-Next Fog
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Kernel Source
+        uses: actions/checkout@v4
+
+      - name: Setup KernelSU-Next
+        run: |
+          curl -LSsM "https://githubusercontent.com" | bash -s legacy
+
+      - name: Install Dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential bc bison flex libssl-dev libncurses-dev git wget python3 zip curl gcc-aarch64-linux-gnu gcc-arm-linux-gnueabi
+
+      - name: Compile Kernel
+        run: |
+          export ARCH=arm64
+          export SUBARCH=arm64
+          make O=out vendor/fog-perf_defconfig
+          yes "" | make O=out oldconfig
+          make O=out -j$(nproc) ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- CROSS_COMPILE_ARM32=arm-linux-gnueabi-
+
+      - name: Package with AnyKernel3
+        run: |
+          git clone https://github.com -b master anykernel
+          if [ -f "out/arch/arm64/boot/Image" ]; then cp out/arch/arm64/boot/Image anykernel/; elif [ -f "out/arch/arm64/boot/Image.gz" ]; then cp out/arch/arm64/boot/Image.gz anykernel/; fi
+          cd anykernel && zip -r9 ../NetHunter-Kernel.zip *
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: NetHunter-Kernel
+          path: NetHunter-Kernel.zip
+          
