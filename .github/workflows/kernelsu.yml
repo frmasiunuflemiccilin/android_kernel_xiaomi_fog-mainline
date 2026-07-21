@@ -24,6 +24,9 @@ jobs:
           find . -type f \( -name "*.c" -o -name "*.h" \) -exec sed -i 's/\bhtc_stop\b/ath9k_htc_stop/g' {} +
           find . -type f \( -name "*.c" -o -name "*.h" \) -exec sed -i 's/\bhtc_connect_service\b/ath9k_htc_connect_service/g' {} +
           
+          # TAMBAHKAN BARIS INI UNTUK MEMPERBAIKI ERROR QUALCOMM L2 COUNTERS:
+          cd ../../../..
+          sed -i 's/%ld/%u/g' drivers/perf/qcom_l2_counters.c
     
       - name: Compile Kernel
         run: |
