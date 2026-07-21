@@ -10,25 +10,40 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Kernel Source
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Setup KernelSU
         run: |
           curl -LSs "https://raw.githubusercontent.com/tiann/KernelSU/main/kernel/setup.sh" | bash -s main
 
-      - name: Install Dependencies & Clang Toolchain
+      - name: Install Dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y build-essential bc bison flex libssl-dev libncurses-dev git wget python3 zip curl clang llvm lld
+          sudo apt-get install -y build-essential bc bison flex libssl-dev libncurses-dev git wget python3 zip curl
+
+      - name: Download Official AOSP Clang Toolchain
+        run: |
+          mkdir -p clang
+          wget -q https://android.googlesource.com/platform/prebuilts/clang/host/linux-x86/+archive/refs/heads/main/clang-r416183b.tar.gz -O clang.tar.gz || \
+          wget -q https://github.com/chengnap/toolchain_clang/releases/download/r416183b/clang-r416183b.tar.gz -O clang.tar.gz
+          tar -xzf clang.tar.gz -C clang
+          echo "GITHUB_WORKSPACE=$PWD" >> $GITHUB_ENV
 
       - name: Compile Kernel
         run: |
           export ARCH=arm64
           export SUBARCH=arm64
+          export PATH="$GITHUB_WORKSPACE/clang/bin:$PATH"
           
-          # Memaksa menggunakan compiler Clang dan LLVM agar opsi arm64 terbaca dengan benar
+          # Gunakan config vendor fog-perf
           make O=out vendor/fog-perf_defconfig
-          make -j$(nproc) O=out CC=clang CLANG_TRIPLE=aarch64-linux-gnu- CROSS_COMPILE=aarch64-linux-gnu- CROSS_COMPILE_ARM32=arm-linux-gnueabi-
+          
+          # Mulai proses kompilasi menggunakan Clang AOSP
+          make -j$(nproc) O=out \
+            CC=clang \
+            CLANG_TRIPLE=aarch64-linux-gnu- \
+            CROSS_COMPILE=aarch64-linux-gnu- \
+            CROSS_COMPILE_ARM32=arm-linux-gnueabi-
 
       - name: Package with AnyKernel3
         run: |
