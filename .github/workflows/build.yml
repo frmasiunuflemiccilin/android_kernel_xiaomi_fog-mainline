@@ -16,24 +16,31 @@ jobs:
         run: |
           curl -LSs "https://raw.githubusercontent.com/tiann/KernelSU/main/kernel/setup.sh" | bash -s main
 
-      - name: Install Dependencies & Clang Toolchain
+      - name: Install Dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y build-essential bc bison flex libssl-dev libncurses-dev git wget python3 zip curl clang lld llvm
+          sudo apt-get install -y build-essential bc bison flex libssl-dev libncurses-dev git wget python3 zip curl
+
+      - name: Download Toolchain
+        run: |
+          git clone --depth=1 https://github.com/LineageOS/android_prebuilts_gcc_linux-x86_aarch64_aarch64-linux-android-4.9.git -b lineage-18.1 gcc64
+          git clone --depth=1 https://github.com/LineageOS/android_prebuilts_clang_host_linux-x86_clang-r416183b.git -b lineage-18.1 clang
 
       - name: Compile Kernel
         run: |
           export ARCH=arm64
           export SUBARCH=arm64
+          export PATH="$PWD/clang/bin:$PWD/gcc64/bin:$PATH"
           
           # Gunakan config vendor fog-perf
           make O=out vendor/fog-perf_defconfig
           
-          # Kompilasi menggunakan Clang sistem Ubuntu
+          # Kompilasi menggunakan Toolchain LineageOS yang kompatibel
           make -j$(nproc) O=out \
             CC=clang \
-            CROSS_COMPILE=aarch64-linux-gnu- \
-            CROSS_COMPILE_ARM32=arm-linux-gnueabi-
+            CLANG_TRIPLE=aarch64-linux-gnu- \
+            CROSS_COMPILE=aarch64-linux-android- \
+            CROSS_COMPILE_ARM32=arm-linux-androideabi-
 
       - name: Package with AnyKernel3
         run: |
@@ -53,4 +60,5 @@ jobs:
         with:
           name: NetHunter-Fog-KSU-AR9271-Kernel
           path: NetHunter-Fog-KSU-AR9271-Kernel.zip
-          
+
+        
