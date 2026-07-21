@@ -19,11 +19,14 @@ jobs:
       
       - name: Fix Ath9k HTC Conflict & Qualcomm L2 Counters
         run: |
-          sed -i 's/htc_start/ath9k_htc_start/g' drivers/net/wireless/ath/ath9k/*.{c,h}
-          sed -i 's/htc_stop/ath9k_htc_stop/g' drivers/net/wireless/ath/ath9k/*.{c,h}
-          sed -i 's/htc_connect_service/ath9k_htc_connect_service/g' drivers/net/wireless/ath/ath9k/*.{c,h}
+          # Menyisir seluruh folder ath9k dan mengubah nama fungsi yang bentrok
+          find drivers/net/wireless/ath/ath9k/ -type f \( -name "*.c" -o -name "*.h" \) -exec sed -i 's/\bhtc_start\b/ath9k_htc_start/g' {} +
+          find drivers/net/wireless/ath/ath9k/ -type f \( -name "*.c" -o -name "*.h" \) -exec sed -i 's/\bhtc_stop\b/ath9k_htc_stop/g' {} +
+          find drivers/net/wireless/ath/ath9k/ -type f \( -name "*.c" -o -name "*.h" \) -exec sed -i 's/\bhtc_connect_service\b/ath9k_htc_connect_service/g' {} +
+          
+          # Memperbaiki kesalahan format cetak angka pada driver Qualcomm L2 Counters
           sed -i 's/%[lid]/%u/g' drivers/perf/qcom_l2_counters.c
-
+          
       - name: Compile Kernel
         run: |
           export ARCH=arm64
