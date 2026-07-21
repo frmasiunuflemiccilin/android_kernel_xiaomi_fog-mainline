@@ -16,7 +16,14 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y build-essential bc bison flex libssl-dev libncurses-dev git wget python3 zip curl gcc-aarch64-linux-gnu gcc-arm-linux-gnueabi
-
+          
+      - name: Fix Ath9k HTC Conflict
+        run: |
+          cd drivers/net/wireless/ath/ath9k
+          sed -i 's/\bhtc_start\b/ath9k_htc_start/g' *.{c,h}
+          sed -i 's/\bhtc_stop\b/ath9k_htc_stop/g' *.{c,h}
+          sed -i 's/\bhtc_connect_service\b/ath9k_htc_connect_service/g' *.{c,h}
+    
       - name: Compile Kernel
         run: |
           export ARCH=arm64
