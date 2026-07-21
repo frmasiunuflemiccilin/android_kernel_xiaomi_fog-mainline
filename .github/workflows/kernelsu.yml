@@ -1,4 +1,4 @@
-name: Build NetHunter Kernel Fog with Magisk Support
+name: Build NetHunter Kernel Fog with AR9271
 
 on:
   push:
@@ -16,39 +16,24 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y build-essential bc bison flex libssl-dev libncurses-dev git wget python3 zip curl gcc-aarch64-linux-gnu gcc-arm-linux-gnueabi
-          
-      - name: Fix Ath9k HTC Conflict
-        run: |
-          cd drivers/net/wireless/ath/ath9k
-          find . -type f \( -name "*.c" -o -name "*.h" \) -exec sed -i 's/\bhtc_start\b/ath9k_htc_start/g' {} +
-          find . -type f \( -name "*.c" -o -name "*.h" \) -exec sed -i 's/\bhtc_stop\b/ath9k_htc_stop/g' {} +
-          find . -type f \( -name "*.c" -o -name "*.h" \) -exec sed -i 's/\bhtc_connect_service\b/ath9k_htc_connect_service/g' {} +
-          
-          # TAMBAHKAN BARIS INI UNTUK MEMPERBAIKI ERROR QUALCOMM L2 COUNTERS:
-          cd ../../../..
-          sed -i 's/%ld/%u/g' drivers/perf/qcom_l2_counters.c
-    
+
       - name: Compile Kernel
         run: |
           export ARCH=arm64
           export SUBARCH=arm64
           
-          # Membuat defconfig awal perangkat Xiaomi fog
+          # Gunakan config vendor fog-perf
           make O=out vendor/fog-perf_defconfig
           
-          # Memperbarui file konfigurasi secara otomatis
-          yes "" | make O=out oldconfig
-          
-          # Memulai proses kompilasi penuh menggunakan semua core CPU tersedia
-          make O=out -j$(nproc) \
+          # Kompilasi langsung menggunakan gcc cross-compiler bawaan sistem yang stabil (tanpa KSU)
+          make -j$(nproc) O=out \
             ARCH=arm64 \
             CROSS_COMPILE=aarch64-linux-gnu- \
             CROSS_COMPILE_ARM32=arm-linux-gnueabi-
 
       - name: Package with AnyKernel3
         run: |
-          # Mengunduh AnyKernel3 dengan URL repository yang lengkap
-          git clone https://github.com/osm0sis/AnyKernel3 -b master anykernel
+          git clone https://github.com/osm0sis/AnyKernel3.git -b master anykernel
           
           if [ -f "out/arch/arm64/boot/Image" ]; then
             cp out/arch/arm64/boot/Image anykernel/
@@ -57,11 +42,11 @@ jobs:
           fi
           
           cd anykernel
-          zip -r9 ../NetHunter-Fog-Magisk-Kernel.zip *
+          zip -r9 ../NetHunter-Fog-AR9271-Kernel.zip *
 
       - name: Upload Kernel ZIP Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: NetHunter-Fog-Magisk-Kernel
-          path: NetHunter-Fog-Magisk-Kernel.zip
+          name: NetHunter-Fog-AR9271-Kernel
+          path: NetHunter-Fog-AR9271-Kernel.zip
           
