@@ -1,4 +1,4 @@
-name: Build KernelSU-Next Fog
+name: Build KernelSU-Next Legacy
 
 on:
   workflow_dispatch:
@@ -10,9 +10,9 @@ jobs:
       - name: Checkout Kernel Source
         uses: actions/checkout@v4
 
-      - name: Setup KernelSU-Next
+      - name: Setup KernelSU-Next Legacy
         run: |
-          curl -LSsM "https://githubusercontent.com" | bash -s legacy
+          curl -LSs "https://raw.githubusercontent.com/KernelSU-Next/KernelSU-Next/next/kernel/setup.sh" | bash -s legacy
 
       - name: Install Dependencies
         run: |
