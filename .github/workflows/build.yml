@@ -10,7 +10,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Kernel Source
-        uses: actions/checkout@v4
+        uses: actions/checkout@v3
 
       - name: Setup KernelSU
         run: |
@@ -26,9 +26,10 @@ jobs:
           export ARCH=arm64
           export SUBARCH=arm64
           
-          # Menggunakan config fog-perf yang sudah diaktifkan CONFIG_KSU=y
-          make O=out fog-perf_defconfig
+          # Diperbarui dengan menyertakan path folder vendor tempat file config berada
+          make O=out vendor/fog-perf_defconfig
           
+          # Mulai proses kompilasi
           make -j$(nproc) O=out
 
       - name: Package with AnyKernel3
@@ -42,7 +43,7 @@ jobs:
           fi
           
           cd anykernel
-          zip -r9 ../NetHunter-Fog-KSU-AR9271.zip *
+          zip -r9 ../NetHunter-Fog-KSU-AR9271-Kernel.zip *
 
       - name: Upload Kernel ZIP Artifact
         uses: actions/upload-artifact@v4
