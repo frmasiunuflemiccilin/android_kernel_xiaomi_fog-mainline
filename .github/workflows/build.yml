@@ -14,8 +14,8 @@ jobs:
 
       - name: Setup KernelSU
         run: |
-          curl -LSs "https://raw.githubusercontent.com/tiann/KernelSU/main/kernel/setup.sh" | bash -s main
-
+          curl -LSs "https://raw.githubusercontent.com/rifsxd/KernelSU-Next/next/kernel/setup.sh" | bash -s next
+      
       - name: Install Build Dependencies & Toolchains
         run: |
           sudo apt-get update
