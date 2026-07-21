@@ -36,15 +36,15 @@ jobs:
           yes "" | make O=out oldconfig
           
           # Memulai proses kompilasi penuh menggunakan semua core CPU tersedia
-          make O=out -j$(nproc) O=out \
+          make O=out -j$(nproc) \
             ARCH=arm64 \
             CROSS_COMPILE=aarch64-linux-gnu- \
             CROSS_COMPILE_ARM32=arm-linux-gnueabi-
 
       - name: Package with AnyKernel3
         run: |
-          # Mengunduh AnyKernel3 untuk membungkus hasil kompilasi kernel ke bentuk berkas .zip flashable
-          git clone https://github.com -b master anykernel
+          # Mengunduh AnyKernel3 dengan URL repository yang lengkap
+          git clone https://github.com/osm0sis/AnyKernel3 -b master anykernel
           
           if [ -f "out/arch/arm64/boot/Image" ]; then
             cp out/arch/arm64/boot/Image anykernel/
