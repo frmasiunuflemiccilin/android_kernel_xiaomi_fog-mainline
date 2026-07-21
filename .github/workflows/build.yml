@@ -12,10 +12,10 @@ jobs:
       - name: Checkout Kernel Source
         uses: actions/checkout@v4
 
-      - name: Setup KernelSU
+      - name: Setup KernelSU-Next
         run: |
-          curl -LSs "https://raw.githubusercontent.com/rifsxd/KernelSU-Next/next/kernel/setup.sh" | bash -s next
-      
+          curl -LSs "https://raw.githubusercontent.com/KernelSU-Next/KernelSU-Next/next/kernel/setup.sh" | bash -
+
       - name: Install Build Dependencies & Toolchains
         run: |
           sudo apt-get update
@@ -26,11 +26,14 @@ jobs:
           export ARCH=arm64
           export SUBARCH=arm64
           
-          # Gunakan config vendor fog-perf
+          # Memuat defconfig awal perangkat
           make O=out vendor/fog-perf_defconfig
           
-          # Kompilasi langsung menggunakan gcc cross-compiler bawaan sistem yang stabil
-          make -j$(nproc) O=out \
+          # Otomatis menjawab 'yes' untuk konfigurasi baru (seperti KSU)
+          yes "" | make O=out oldconfig
+          
+          # Memulai proses kompilasi penuh
+          make O=out -j$(nproc) O=out \
             ARCH=arm64 \
             CROSS_COMPILE=aarch64-linux-gnu- \
             CROSS_COMPILE_ARM32=arm-linux-gnueabi-
