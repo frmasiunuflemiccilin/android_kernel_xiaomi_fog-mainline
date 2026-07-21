@@ -1,0 +1,49 @@
+name: Build NetHunter Kernel Fog with AR9271
+
+on:
+  push:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Kernel Source
+        uses: actions/checkout@v3
+
+      - name: Install Dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential bc bison flex libssl-dev libncurses-dev git wget python3 zip curl
+
+      - name: Compile Kernel
+        run: |
+          export ARCH=arm64
+          export SUBARCH=arm64
+          
+
+          make O=out fog-perf_defconfig
+          
+          make -j$(nproc) O=out
+
+      - name: Package with AnyKernel3
+        run: |
+          git clone https://github.com/osm0sis/AnyKernel3.git -b master anykernel
+          
+        
+          if [ -f "out/arch/arm64/boot/Image" ]; then
+            cp out/arch/arm64/boot/Image anykernel/
+          elif [ -f "out/arch/arm64/boot/Image.gz" ]; then
+            cp out/arch/arm64/boot/Image.gz anykernel/
+          fi
+          
+          cd anykernel
+          zip -r9 ../NetHunter-Fog-AR9271-Kernel.zip *
+
+      - name: Upload Kernel ZIP Artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: NetHunter-Fog-Kernel-AR9271
+          path: NetHunter-Fog-AR9271-Kernel.zip
+          
