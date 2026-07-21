@@ -42,7 +42,7 @@ jobs:
           zip -r9 ../NetHunter-Fog-AR9271-Kernel.zip *
 
       - name: Upload Kernel ZIP Artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: NetHunter-Fog-Kernel-AR9271
           path: NetHunter-Fog-AR9271-Kernel.zip
