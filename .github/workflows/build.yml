@@ -15,7 +15,7 @@ jobs:
       - name: Setup KernelSU-Next
         run: |
           curl -LSsM "https://githubusercontent.com" | bash -s legacy
-          
+
       - name: Install Build Dependencies & Toolchains
         run: |
           sudo apt-get update
@@ -25,13 +25,13 @@ jobs:
         run: |
           export ARCH=arm64
           export SUBARCH=arm64
-          
-          # Memuat defconfig awal perangkat
+
+          # Membuat defconfig awal perangkat
           make O=out vendor/fog-perf_defconfig
-          
+
           # Otomatis menjawab 'yes' untuk konfigurasi baru (seperti KSU)
           yes "" | make O=out oldconfig
-          
+
           # Memulai proses kompilasi penuh
           make O=out -j$(nproc) O=out \
             ARCH=arm64 \
@@ -40,14 +40,14 @@ jobs:
 
       - name: Package with AnyKernel3
         run: |
-          git clone https://github.com/osm0sis/AnyKernel3.git -b master anykernel
-          
+          git clone https://github.com -b master anykernel
+
           if [ -f "out/arch/arm64/boot/Image" ]; then
             cp out/arch/arm64/boot/Image anykernel/
           elif [ -f "out/arch/arm64/boot/Image.gz" ]; then
             cp out/arch/arm64/boot/Image.gz anykernel/
           fi
-          
+
           cd anykernel
           zip -r9 ../NetHunter-Fog-KSU-AR9271-Kernel.zip *
 
@@ -56,4 +56,3 @@ jobs:
         with:
           name: NetHunter-Fog-KSU-AR9271-Kernel
           path: NetHunter-Fog-KSU-AR9271-Kernel.zip
-          
