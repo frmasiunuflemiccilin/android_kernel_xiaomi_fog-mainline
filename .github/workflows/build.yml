@@ -16,32 +16,22 @@ jobs:
         run: |
           curl -LSs "https://raw.githubusercontent.com/tiann/KernelSU/main/kernel/setup.sh" | bash -s main
 
-      - name: Install Dependencies
+      - name: Install Dependencies & Clang Toolchain
         run: |
           sudo apt-get update
-          sudo apt-get install -y build-essential bc bison flex libssl-dev libncurses-dev git wget python3 zip curl
-
-      - name: Download Official AOSP Clang Toolchain
-        run: |
-          mkdir -p clang
-          wget -q https://android.googlesource.com/platform/prebuilts/clang/host/linux-x86/+archive/refs/heads/main/clang-r416183b.tar.gz -O clang.tar.gz || \
-          wget -q https://github.com/chengnap/toolchain_clang/releases/download/r416183b/clang-r416183b.tar.gz -O clang.tar.gz
-          tar -xzf clang.tar.gz -C clang
-          echo "GITHUB_WORKSPACE=$PWD" >> $GITHUB_ENV
+          sudo apt-get install -y build-essential bc bison flex libssl-dev libncurses-dev git wget python3 zip curl clang lld llvm
 
       - name: Compile Kernel
         run: |
           export ARCH=arm64
           export SUBARCH=arm64
-          export PATH="$GITHUB_WORKSPACE/clang/bin:$PATH"
           
           # Gunakan config vendor fog-perf
           make O=out vendor/fog-perf_defconfig
           
-          # Mulai proses kompilasi menggunakan Clang AOSP
+          # Kompilasi menggunakan Clang sistem Ubuntu
           make -j$(nproc) O=out \
             CC=clang \
-            CLANG_TRIPLE=aarch64-linux-gnu- \
             CROSS_COMPILE=aarch64-linux-gnu- \
             CROSS_COMPILE_ARM32=arm-linux-gnueabi-
 
