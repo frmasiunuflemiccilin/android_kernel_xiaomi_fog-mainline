@@ -58,7 +58,7 @@ jobs:
       - name: Package with AnyKernel3
         run: |
           # 1. Klon repositori dasar AnyKernel3 resmi
-          git clone https://github.com -b master anykernel
+          git clone https://github.com/osm0sis/AnyKernel3.git -b master anykernel
           
           # 2. Pindahkan berkas gambar kernel utama yang sudah membawa driver ath9k didalamnya
           if [ -f "out/arch/arm64/boot/Image.gz-dtb" ]; then
