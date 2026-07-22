@@ -54,10 +54,9 @@ jobs:
             ARCH=arm64 \
             CROSS_COMPILE=aarch64-linux-gnu- \
             CROSS_COMPILE_ARM32=arm-linux-gnueabi-
-
       - name: Package with AnyKernel3
         run: |
-          # 1. Klon repositori dasar AnyKernel3 resmi
+          # 1. Klon repositori dasar AnyKernel3 resmi (Sudah Diperbaiki Tautannya)
           git clone https://github.com/osm0sis/AnyKernel3.git -b master anykernel
           
           # 2. Pindahkan berkas gambar kernel utama hasil kompilasi bersih
@@ -69,18 +68,14 @@ jobs:
             cp out/arch/arm64/boot/Image anykernel/
           fi
           
-          # 3. KUMPULKAN SEMUA MODUL DRIVER: Mengambil berkas eksternal .ko Atheros & Mediatek sekaligus
+          # 3. Kumpulkan semua berkas modul .ko Atheros & MediaTek sekaligus ke folder /modules
           mkdir -p anykernel/modules/system/lib/modules
           find out/drivers/net/wireless/ -name "*.ko" -exec cp {} anykernel/modules/system/lib/modules/ \;
           
-          # 4. Timpa file anykernel.sh bawaan dengan milik Anda yang sudah diperbaiki (do.modules=1)
-          cp anykernel.sh anykernel/anykernel.sh
-          
+          # 4. Bungkus paket instalasi menjadi ZIP
           cd anykernel
-          
-          # 5. Bungkus paket instalasi menjadi ZIP
           zip -r9 ../NetHunter-Fog-AR9271-Kernel.zip * -x .git README.md
-
+          
       - name: Upload Kernel ZIP Artifact
         uses: actions/upload-artifact@v4
         with:
