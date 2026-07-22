@@ -1,4 +1,4 @@
-name: Build NetHunter Kernel Fog with AR9271
+name: Build NetHunter Kernel Fog with AR9271 & MT7601U
 
 on:
   push:
@@ -29,37 +29,27 @@ jobs:
           export ARCH=arm64
           export SUBARCH=arm64
           
-          # 1. Generate file konfigurasi dasar dari vendor (.config)
+          # 1. Ekstrak defconfig dasar bawaan vendor
           make O=out vendor/fog-perf_defconfig
           
-          # 2. Amandemen Konfigurasi: Paksa driver & sub-sistem nirkabel menjadi Built-in (=y)
-          # Perintah ini menimpa baris modul (=m) lama yang ada di file defconfig secara otomatis
-          sed -i 's/CONFIG_WIRELESS=m/CONFIG_WIRELESS=y/g' out/.config
-          sed -i 's/CONFIG_CFG80211=m/CONFIG_CFG80211=y/g' out/.config
-          sed -i 's/CONFIG_MAC80211=m/CONFIG_MAC80211=y/g' out/.config
-          sed -i 's/CONFIG_WLAN=m/CONFIG_WLAN=y/g' out/.config
+          # 2. Kondisikan Atheros AR9271 menjadi Built-in (=y)
           sed -i 's/CONFIG_ATH_CARDS=m/CONFIG_ATH_CARDS=y/g' out/.config
+          sed -i 's/CONFIG_ATH9K=m/CONFIG_ATH9K=y/g' out/.config
+          sed -i 's/CONFIG_ATH9K_HW=m/CONFIG_ATH9K_HW=y/g' out/.config
+          sed -i 's/CONFIG_ATH9K_COMMON=m/CONFIG_ATH9K_COMMON=y/g' out/.config
           sed -i 's/CONFIG_ATH9K_HTC=m/CONFIG_ATH9K_HTC=y/g' out/.config
-          
-          # 3. Antisipasi jika parameter tersebut belum ada sama sekali di defconfig asli
-          echo "CONFIG_WIRELESS=y" >> out/.config
-          echo "CONFIG_CFG80211=y" >> out/.config
-          echo "CONFIG_MAC80211=y" >> out/.config
-          echo "CONFIG_NETDEVICES=y" >> out/.config
-          echo "CONFIG_WLAN=y" >> out/.config
-          echo "CONFIG_ATH_COMMON=y" >> out/.config
-          echo "CONFIG_ATH_CARDS=y" >> out/.config
           echo "CONFIG_ATH9K_HTC=y" >> out/.config
-          
-          # Fitur injeksi paket & monitor mode ekstra untuk Kali NetHunter
-          echo "CONFIG_CFG80211_WEXT=y" >> out/.config
-          echo "CONFIG_MAC80211_LEDS=y" >> out/.config
           echo "CONFIG_ATH9K_HTC_DEBUGFS=y" >> out/.config
           
-          # 4. Sinkronisasikan modifikasi setelan di atas agar dependensi Kconfig otomatis terpenuhi
+          # 3. KONDISI PERMINTAAN: Pastikan MediaTek MT7601U Tetap Modul (=m)
+          sed -i 's/CONFIG_MT7601U=y/CONFIG_MT7601U=m/g' out/.config
+          sed -i 's/CONFIG_MT76_CORE=y/CONFIG_MT76_CORE=m/g' out/.config
+          sed -i 's/CONFIG_MT76_USB=y/CONFIG_MT76_USB=m/g' out/.config
+          
+          # 4. Sinkronisasi dependensi Kconfig otomatis
           make O=out olddefconfig
           
-          # 5. Jalankan kompilasi kernel
+          # 5. Jalankan kompilasi kernel utama dan modul eksternal sekaligus
           make -j$(nproc) O=out \
             ARCH=arm64 \
             CROSS_COMPILE=aarch64-linux-gnu- \
@@ -67,10 +57,10 @@ jobs:
 
       - name: Package with AnyKernel3
         run: |
-          # 1. Unduh repositori resmi AnyKernel3
+          # 1. Klon repositori dasar AnyKernel3 resmi
           git clone https://github.com -b master anykernel
           
-          # 2. Ambil biner gambar kernel terkompilasi (terintegrasi driver AR9271)
+          # 2. Pindahkan berkas gambar kernel utama yang sudah membawa driver ath9k didalamnya
           if [ -f "out/arch/arm64/boot/Image.gz-dtb" ]; then
             cp out/arch/arm64/boot/Image.gz-dtb anykernel/
           elif [ -f "out/arch/arm64/boot/Image.gz" ]; then
@@ -79,21 +69,25 @@ jobs:
             cp out/arch/arm64/boot/Image anykernel/
           fi
           
+          # 3. PROSES PENCARIAN MODUL .KO: Otomatis mencari hasil build (.ko milik MediaTek)
+          mkdir -p anykernel/modules/system/lib/modules
+          find out/ -name "*.ko" -exec cp {} anykernel/modules/system/lib/modules/ \;
+          
           cd anykernel
           
-          # 3. Hapus folder modul kosong bawaan template AnyKernel3 agar paket rapi
-          rm -rf modules/
-          
-          # 4. Konfigurasi anykernel.sh otomatis agar kompatibel dengan Xiaomi Fog
-          sed -i 's/kernel.string=KernelName by YourName/kernel.string=NetHunter Kernel Fog by AR9271/g' anykernel.sh
+          # 4. Amandemen anykernel.sh khusus untuk perangkat Xiaomi Fog (Redmi 10C)
+          sed -i 's/kernel.string=KernelName by YourName/kernel.string=NetHunter Kernel Fog Hybrid/g' anykernel.sh
           sed -i 's/device.name1=maguro/device.name1=fog/g' anykernel.sh
-          sed -i 's/do.modules=1/do.modules=0/g' anykernel.sh
           
-          # Ubah ke mode blok otomatis (mencegah hardcode partisi boot Galaxy Nexus)
+          # RAHASIA ANTI-BOOTLOOP: Aktifkan injeksi Systemless Magisk/KernelSU untuk modul luar (.ko)
+          sed -i 's/do.modules=1/do.modules=1/g' anykernel.sh
+          sed -i 's/do.systemless=1/do.systemless=1/g' anykernel.sh
+          
+          # Set partisi block otomatis untuk Xiaomi
           sed -i 's|BLOCK=/dev/block/platform/omap/omap_hsmmc.0/by-name/boot;|BLOCK=auto;|g' anykernel.sh
           sed -i 's/IS_SLOT_DEVICE=0;/IS_SLOT_DEVICE=auto;/g' anykernel.sh
           
-          # 5. Kompresi keseluruhan paket ke zip siap pakai
+          # 5. Bungkus paket instalasi menjadi ZIP tanpa membawa file git / readme bawaan
           zip -r9 ../NetHunter-Fog-AR9271-Kernel.zip * -x .git README.md
 
       - name: Upload Kernel ZIP Artifact
