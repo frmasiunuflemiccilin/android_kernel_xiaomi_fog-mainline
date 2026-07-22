@@ -19,6 +19,7 @@ jobs:
 
       - name: Fix Ath9k HTC Conflict & Qualcomm L2 Counters
         run: |
+          # Perbaikan konflik fungsi teks penamaan
           sed -i 's/htc_start/ath9k_htc_start/g' drivers/net/wireless/ath/ath9k/*.{c,h}
           sed -i 's/htc_stop/ath9k_htc_stop/g' drivers/net/wireless/ath/ath9k/*.{c,h}
           sed -i 's/htc_connect_service/ath9k_htc_connect_service/g' drivers/net/wireless/ath/ath9k/*.{c,h}
@@ -32,16 +33,15 @@ jobs:
           # 1. Ekstrak defconfig dasar bawaan vendor
           make O=out vendor/fog-perf_defconfig
           
-          # 2. Kondisikan Atheros AR9271 menjadi Built-in (=y)
-          sed -i 's/CONFIG_ATH_CARDS=m/CONFIG_ATH_CARDS=y/g' out/.config
-          sed -i 's/CONFIG_ATH9K=m/CONFIG_ATH9K=y/g' out/.config
-          sed -i 's/CONFIG_ATH9K_HW=m/CONFIG_ATH9K_HW=y/g' out/.config
-          sed -i 's/CONFIG_ATH9K_COMMON=m/CONFIG_ATH9K_COMMON=y/g' out/.config
-          sed -i 's/CONFIG_ATH9K_HTC=m/CONFIG_ATH9K_HTC=y/g' out/.config
-          echo "CONFIG_ATH9K_HTC=y" >> out/.config
-          echo "CONFIG_ATH9K_HTC_DEBUGFS=y" >> out/.config
+          # 2. SOLUSI ANTI-CRASH: Turunkan tingkat Atheros AR9271 menjadi Modul (=m)
+          # Metode ini mencegah runtuhnya pointer DMA internal kernel saat USB dicolok!
+          sed -i 's/CONFIG_ATH_CARDS=y/CONFIG_ATH_CARDS=m/g' out/.config
+          sed -i 's/CONFIG_ATH9K=y/CONFIG_ATH9K=m/g' out/.config
+          sed -i 's/CONFIG_ATH9K_HW=y/CONFIG_ATH9K_HW=m/g' out/.config
+          sed -i 's/CONFIG_ATH9K_COMMON=y/CONFIG_ATH9K_COMMON=m/g' out/.config
+          sed -i 's/CONFIG_ATH9K_HTC=y/CONFIG_ATH9K_HTC=m/g' out/.config
           
-          # 3. KONDISI PERMINTAAN: Pastikan MediaTek MT7601U Tetap Modul (=m)
+          # 3. Pastikan MediaTek MT7601U Tetap Berstatus Modul (=m)
           sed -i 's/CONFIG_MT7601U=y/CONFIG_MT7601U=m/g' out/.config
           sed -i 's/CONFIG_MT76_CORE=y/CONFIG_MT76_CORE=m/g' out/.config
           sed -i 's/CONFIG_MT76_USB=y/CONFIG_MT76_USB=m/g' out/.config
@@ -49,7 +49,7 @@ jobs:
           # 4. Sinkronisasi dependensi Kconfig otomatis
           make O=out olddefconfig
           
-          # 5. Jalankan kompilasi kernel utama dan modul eksternal sekaligus
+          # 5. Jalankan kompilasi kernel utama dan seluruh file modul eksternal .ko
           make -j$(nproc) O=out \
             ARCH=arm64 \
             CROSS_COMPILE=aarch64-linux-gnu- \
@@ -60,7 +60,7 @@ jobs:
           # 1. Klon repositori dasar AnyKernel3 resmi
           git clone https://github.com/osm0sis/AnyKernel3.git -b master anykernel
           
-          # 2. Pindahkan berkas gambar kernel utama yang sudah membawa driver ath9k didalamnya
+          # 2. Pindahkan berkas gambar kernel utama hasil kompilasi bersih
           if [ -f "out/arch/arm64/boot/Image.gz-dtb" ]; then
             cp out/arch/arm64/boot/Image.gz-dtb anykernel/
           elif [ -f "out/arch/arm64/boot/Image.gz" ]; then
@@ -69,25 +69,16 @@ jobs:
             cp out/arch/arm64/boot/Image anykernel/
           fi
           
-          # 3. PROSES PENCARIAN MODUL .KO: Otomatis mencari hasil build (.ko milik MediaTek)
+          # 3. KUMPULKAN SEMUA MODUL DRIVER: Mengambil berkas eksternal .ko Atheros & Mediatek sekaligus
           mkdir -p anykernel/modules/system/lib/modules
-          find out/ -name "*.ko" -exec cp {} anykernel/modules/system/lib/modules/ \;
+          find out/drivers/net/wireless/ -name "*.ko" -exec cp {} anykernel/modules/system/lib/modules/ \;
+          
+          # 4. Timpa file anykernel.sh bawaan dengan milik Anda yang sudah diperbaiki (do.modules=1)
+          cp anykernel.sh anykernel/anykernel.sh
           
           cd anykernel
           
-          # 4. Amandemen anykernel.sh khusus untuk perangkat Xiaomi Fog (Redmi 10C)
-          sed -i 's/kernel.string=KernelName by YourName/kernel.string=NetHunter Kernel Fog Hybrid/g' anykernel.sh
-          sed -i 's/device.name1=maguro/device.name1=fog/g' anykernel.sh
-          
-          # RAHASIA ANTI-BOOTLOOP: Aktifkan injeksi Systemless Magisk/KernelSU untuk modul luar (.ko)
-          sed -i 's/do.modules=1/do.modules=1/g' anykernel.sh
-          sed -i 's/do.systemless=1/do.systemless=1/g' anykernel.sh
-          
-          # Set partisi block otomatis untuk Xiaomi
-          sed -i 's|BLOCK=/dev/block/platform/omap/omap_hsmmc.0/by-name/boot;|BLOCK=auto;|g' anykernel.sh
-          sed -i 's/IS_SLOT_DEVICE=0;/IS_SLOT_DEVICE=auto;/g' anykernel.sh
-          
-          # 5. Bungkus paket instalasi menjadi ZIP tanpa membawa file git / readme bawaan
+          # 5. Bungkus paket instalasi menjadi ZIP
           zip -r9 ../NetHunter-Fog-AR9271-Kernel.zip * -x .git README.md
 
       - name: Upload Kernel ZIP Artifact
@@ -95,3 +86,4 @@ jobs:
         with:
           name: NetHunter-Fog-AR9271-Kernel
           path: NetHunter-Fog-AR9271-Kernel.zip
+          
