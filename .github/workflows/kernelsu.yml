@@ -25,48 +25,30 @@ jobs:
           sed -i 's/htc_connect_service/ath9k_htc_connect_service/g' drivers/net/wireless/ath/ath9k/*.{c,h}
           sed -i 's/%[lid]/%u/g' drivers/perf/qcom_l2_counters.c
 
-      - name: Compile Kernel & Configure Bluetooth Arsenal
+      - name: Compile Kernel
         run: |
           export ARCH=arm64
           export SUBARCH=arm64
           
-          # 1. SUNTIK KONFIGURASI LANGSUNG KE FILE DEFCONFIG SUMBER
-          # Lakukan ini sebelum mengekstrak defconfig agar tidak di-reset oleh olddefconfig
-          echo 'CONFIG_BT=y' >> arch/arm64/configs/vendor/fog-perf_defconfig
-          echo 'CONFIG_BT_RFCOMM=y' >> arch/arm64/configs/vendor/fog-perf_defconfig
-          echo 'CONFIG_BT_BNEP=y' >> arch/arm64/configs/vendor/fog-perf_defconfig
-          echo 'CONFIG_BT_HIDP=y' >> arch/arm64/configs/vendor/fog-perf_defconfig
-          echo 'CONFIG_BT_HCIUART=y' >> arch/arm64/configs/vendor/fog-perf_defconfig
-          echo 'CONFIG_BT_HCIUART_H4=y' >> arch/arm64/configs/vendor/fog-perf_defconfig
-          echo 'CONFIG_BT_HCIUART_BCSP=y' >> arch/arm64/configs/vendor/fog-perf_defconfig
-          echo 'CONFIG_BT_HCIUART_LL=y' >> arch/arm64/configs/vendor/fog-perf_defconfig
-          echo 'CONFIG_BT_HCIUART_3WIRE=y' >> arch/arm64/configs/vendor/fog-perf_defconfig
-          echo 'CONFIG_BT_HCIUART_QCA=y' >> arch/arm64/configs/vendor/fog-perf_defconfig
-          echo 'CONFIG_SERIAL_DEV_BUS=y' >> arch/arm64/configs/vendor/fog-perf_defconfig
-          echo 'CONFIG_BT_HCIUART_SERDEV=y' >> arch/arm64/configs/vendor/fog-perf_defconfig
-          
-          # Dukungan eksternal USB Dongle tetap diset sebagai modul
-          echo 'CONFIG_BT_HCIBTUSB=m' >> arch/arm64/configs/vendor/fog-perf_defconfig
-
-          # 2. Ekstrak defconfig yang SUDAH dimodifikasi ke folder out
+          # 1. Ekstrak defconfig yang SUDAH kamu edit langsung di GitHub
           make O=out vendor/fog-perf_defconfig || make O=out fog-perf_defconfig
           
-          # 3. Kembalikan status Atheros AR9271 menjadi Built-in (=y)
+          # 2. Kembalikan status Atheros AR9271 menjadi Built-in (=y)
           sed -i 's/CONFIG_ATH_CARDS=m/CONFIG_ATH_CARDS=y/g' out/.config || echo 'CONFIG_ATH_CARDS=y' >> out/.config
           sed -i 's/CONFIG_ATH9K=m/CONFIG_ATH9K=y/g' out/.config || echo 'CONFIG_ATH9K=y' >> out/.config
           sed -i 's/CONFIG_ATH9K_HW=m/CONFIG_ATH9K_HW=y/g' out/.config || echo 'CONFIG_ATH9K_HW=y' >> out/.config
           sed -i 's/CONFIG_ATH9K_COMMON=m/CONFIG_ATH9K_COMMON=y/g' out/.config || echo 'CONFIG_ATH9K_COMMON=y' >> out/.config
           sed -i 's/CONFIG_ATH9K_HTC=m/CONFIG_ATH9K_HTC=y/g' out/.config || echo 'CONFIG_ATH9K_HTC=y' >> out/.config
           
-          # 4. Pastikan MediaTek MT7601U Tetap Berstatus Modul (=m)
+          # 3. Pastikan MediaTek MT7601U Tetap Berstatus Modul (=m)
           sed -i 's/CONFIG_MT7601U=y/CONFIG_MT7601U=m/g' out/.config
           sed -i 's/CONFIG_MT76_CORE=y/CONFIG_MT76_CORE=m/g' out/.config
           sed -i 's/CONFIG_MT76_USB=y/CONFIG_MT76_USB=m/g' out/.config
 
-          # 5. Sinkronisasi dependensi Kconfig otomatis
+          # 4. Sinkronisasi dependensi Kconfig otomatis
           make O=out ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- CROSS_COMPILE_ARM32=arm-linux-gnueabi- olddefconfig
           
-          # 6. Jalankan kompilasi kernel utama dan seluruh file modul eksternal .ko
+          # 5. Jalankan kompilasi kernel utama dan seluruh file modul eksternal .ko
           make -j$(nproc) O=out \
             ARCH=arm64 \
             CROSS_COMPILE=aarch64-linux-gnu- \
