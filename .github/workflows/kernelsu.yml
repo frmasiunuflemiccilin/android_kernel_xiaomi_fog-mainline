@@ -33,13 +33,12 @@ jobs:
           # 1. Ekstrak defconfig dasar bawaan vendor
           make O=out vendor/fog-perf_defconfig
           
-          # 2. SOLUSI ANTI-CRASH: Turunkan tingkat Atheros AR9271 menjadi Modul (=m)
-          # Metode ini mencegah runtuhnya pointer DMA internal kernel saat USB dicolok!
-          sed -i 's/CONFIG_ATH_CARDS=y/CONFIG_ATH_CARDS=m/g' out/.config
-          sed -i 's/CONFIG_ATH9K=y/CONFIG_ATH9K=m/g' out/.config
-          sed -i 's/CONFIG_ATH9K_HW=y/CONFIG_ATH9K_HW=m/g' out/.config
-          sed -i 's/CONFIG_ATH9K_COMMON=y/CONFIG_ATH9K_COMMON=m/g' out/.config
-          sed -i 's/CONFIG_ATH9K_HTC=y/CONFIG_ATH9K_HTC=m/g' out/.config
+          # 2. Kembalikan status Atheros AR9271 menjadi Built-in (=y)
+          sed -i 's/CONFIG_ATH_CARDS=m/CONFIG_ATH_CARDS=y/g' out/.config || echo 'CONFIG_ATH_CARDS=y' >> out/.config
+          sed -i 's/CONFIG_ATH9K=m/CONFIG_ATH9K=y/g' out/.config || echo 'CONFIG_ATH9K=y' >> out/.config
+          sed -i 's/CONFIG_ATH9K_HW=m/CONFIG_ATH9K_HW=y/g' out/.config || echo 'CONFIG_ATH9K_HW=y' >> out/.config
+          sed -i 's/CONFIG_ATH9K_COMMON=m/CONFIG_ATH9K_COMMON=y/g' out/.config || echo 'CONFIG_ATH9K_COMMON=y' >> out/.config
+          sed -i 's/CONFIG_ATH9K_HTC=m/CONFIG_ATH9K_HTC=y/g' out/.config || echo 'CONFIG_ATH9K_HTC=y' >> out/.config
           
           # 3. Pastikan MediaTek MT7601U Tetap Berstatus Modul (=m)
           sed -i 's/CONFIG_MT7601U=y/CONFIG_MT7601U=m/g' out/.config
@@ -54,9 +53,10 @@ jobs:
             ARCH=arm64 \
             CROSS_COMPILE=aarch64-linux-gnu- \
             CROSS_COMPILE_ARM32=arm-linux-gnueabi-
+            
       - name: Package with AnyKernel3
         run: |
-          # 1. Klon repositori dasar AnyKernel3 resmi (Sudah Diperbaiki Tautannya)
+          # 1. Klon repositori dasar AnyKernel3 resmi
           git clone https://github.com/osm0sis/AnyKernel3.git -b master anykernel
           
           # 2. Pindahkan berkas gambar kernel utama hasil kompilasi bersih
@@ -68,7 +68,7 @@ jobs:
             cp out/arch/arm64/boot/Image anykernel/
           fi
           
-          # 3. Kumpulkan semua berkas modul .ko Atheros & MediaTek sekaligus ke folder /modules
+          # 3. Kumpulkan sisa berkas modul .ko (seperti MediaTek) ke folder /modules
           mkdir -p anykernel/modules/system/lib/modules
           find out/drivers/net/wireless/ -name "*.ko" -exec cp {} anykernel/modules/system/lib/modules/ \;
           
