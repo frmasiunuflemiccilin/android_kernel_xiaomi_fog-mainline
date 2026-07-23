@@ -30,39 +30,39 @@ jobs:
           export ARCH=arm64
           export SUBARCH=arm64
           
-          # 1. Ekstrak defconfig dasar bawaan vendor
+          # 1. SUNTIK KONFIGURASI LANGSUNG KE FILE DEFCONFIG SUMBER
+          # Lakukan ini sebelum mengekstrak defconfig agar tidak di-reset oleh olddefconfig
+          echo 'CONFIG_BT=y' >> arch/arm64/configs/vendor/fog-perf_defconfig
+          echo 'CONFIG_BT_RFCOMM=y' >> arch/arm64/configs/vendor/fog-perf_defconfig
+          echo 'CONFIG_BT_BNEP=y' >> arch/arm64/configs/vendor/fog-perf_defconfig
+          echo 'CONFIG_BT_HIDP=y' >> arch/arm64/configs/vendor/fog-perf_defconfig
+          echo 'CONFIG_BT_HCIUART=y' >> arch/arm64/configs/vendor/fog-perf_defconfig
+          echo 'CONFIG_BT_HCIUART_H4=y' >> arch/arm64/configs/vendor/fog-perf_defconfig
+          echo 'CONFIG_BT_HCIUART_BCSP=y' >> arch/arm64/configs/vendor/fog-perf_defconfig
+          echo 'CONFIG_BT_HCIUART_LL=y' >> arch/arm64/configs/vendor/fog-perf_defconfig
+          echo 'CONFIG_BT_HCIUART_3WIRE=y' >> arch/arm64/configs/vendor/fog-perf_defconfig
+          echo 'CONFIG_BT_HCIUART_QCA=y' >> arch/arm64/configs/vendor/fog-perf_defconfig
+          echo 'CONFIG_SERIAL_DEV_BUS=y' >> arch/arm64/configs/vendor/fog-perf_defconfig
+          echo 'CONFIG_BT_HCIUART_SERDEV=y' >> arch/arm64/configs/vendor/fog-perf_defconfig
+          
+          # Dukungan eksternal USB Dongle tetap diset sebagai modul
+          echo 'CONFIG_BT_HCIBTUSB=m' >> arch/arm64/configs/vendor/fog-perf_defconfig
+
+          # 2. Ekstrak defconfig yang SUDAH dimodifikasi ke folder out
           make O=out vendor/fog-perf_defconfig || make O=out fog-perf_defconfig
           
-          # 2. Kembalikan status Atheros AR9271 menjadi Built-in (=y)
+          # 3. Kembalikan status Atheros AR9271 menjadi Built-in (=y)
           sed -i 's/CONFIG_ATH_CARDS=m/CONFIG_ATH_CARDS=y/g' out/.config || echo 'CONFIG_ATH_CARDS=y' >> out/.config
           sed -i 's/CONFIG_ATH9K=m/CONFIG_ATH9K=y/g' out/.config || echo 'CONFIG_ATH9K=y' >> out/.config
           sed -i 's/CONFIG_ATH9K_HW=m/CONFIG_ATH9K_HW=y/g' out/.config || echo 'CONFIG_ATH9K_HW=y' >> out/.config
           sed -i 's/CONFIG_ATH9K_COMMON=m/CONFIG_ATH9K_COMMON=y/g' out/.config || echo 'CONFIG_ATH9K_COMMON=y' >> out/.config
           sed -i 's/CONFIG_ATH9K_HTC=m/CONFIG_ATH9K_HTC=y/g' out/.config || echo 'CONFIG_ATH9K_HTC=y' >> out/.config
           
-          # 3. Pastikan MediaTek MT7601U Tetap Berstatus Modul (=m)
+          # 4. Pastikan MediaTek MT7601U Tetap Berstatus Modul (=m)
           sed -i 's/CONFIG_MT7601U=y/CONFIG_MT7601U=m/g' out/.config
           sed -i 's/CONFIG_MT76_CORE=y/CONFIG_MT76_CORE=m/g' out/.config
           sed -i 's/CONFIG_MT76_USB=y/CONFIG_MT76_USB=m/g' out/.config
 
-          # Menyuntikkan konfigurasi Bluetooth secara otomatis lewat YAML
-          # Kita jadikan BUILT-IN (-e) agar jalan sejak awal booting bersama kernel
-          ./scripts/config --file out/.config -e CONFIG_BT
-          ./scripts/config --file out/.config -e CONFIG_BT_RFCOMM
-          ./scripts/config --file out/.config -e CONFIG_BT_BNEP
-          ./scripts/config --file out/.config -e CONFIG_BT_HIDP
-          ./scripts/config --file out/.config -e CONFIG_BT_HCIUART
-          ./scripts/config --file out/.config -e CONFIG_BT_HCIUART_H4
-          ./scripts/config --file out/.config -e CONFIG_BT_HCIUART_BCSP
-          ./scripts/config --file out/.config -e CONFIG_BT_HCIUART_LL
-          ./scripts/config --file out/.config -e CONFIG_BT_HCIUART_3WIRE
-          ./scripts/config --file out/.config -e CONFIG_BT_HCIUART_QCA
-          
-          # Untuk Dongle Bluetooth USB Eksternal (bisa dibiarkan jadi modul / -m)
-          ./scripts/config --file out/.config -m CONFIG_BT_HCIBTUSB
-
-
-          
           # 5. Sinkronisasi dependensi Kconfig otomatis
           make O=out ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- CROSS_COMPILE_ARM32=arm-linux-gnueabi- olddefconfig
           
