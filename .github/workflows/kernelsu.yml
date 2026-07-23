@@ -1,4 +1,4 @@
-name: Build NetHunter Kernel Fog with AR9271 & MT7601U
+name: Build NetHunter Fog with AR9271, MT7601U & BT Arsenal
 
 on:
   push:
@@ -25,7 +25,7 @@ jobs:
           sed -i 's/htc_connect_service/ath9k_htc_connect_service/g' drivers/net/wireless/ath/ath9k/*.{c,h}
           sed -i 's/%[lid]/%u/g' drivers/perf/qcom_l2_counters.c
 
-      - name: Compile Kernel
+      - name: Compile Kernel & Configure Bluetooth Arsenal
         run: |
           export ARCH=arm64
           export SUBARCH=arm64
@@ -44,11 +44,27 @@ jobs:
           sed -i 's/CONFIG_MT7601U=y/CONFIG_MT7601U=m/g' out/.config
           sed -i 's/CONFIG_MT76_CORE=y/CONFIG_MT76_CORE=m/g' out/.config
           sed -i 's/CONFIG_MT76_USB=y/CONFIG_MT76_USB=m/g' out/.config
+
+          # 4. Aktifkan Subsistem Bluetooth & Bluetooth Arsenal (Internal & Eksternal)
+          sed -i 's/# CONFIG_BT is not set/CONFIG_BT=y/g' out/.config
+          sed -i 's/CONFIG_BT=m/CONFIG_BT=y/g' out/.config
+          sed -i 's/# CONFIG_BT_RFCOMM is not set/CONFIG_BT_RFCOMM=y/g' out/.config
+          sed -i 's/# CONFIG_BT_BNEP is not set/CONFIG_BT_BNEP=y/g' out/.config
+          sed -i 's/# CONFIG_BT_HIDP is not set/CONFIG_BT_HIDP=y/g' out/.config
+          sed -i 's/# CONFIG_BT_HCIUART is not set/CONFIG_BT_HCIUART=y/g' out/.config
+          sed -i 's/# CONFIG_BT_HCIBTUSB is not set/CONFIG_BT_HCIBTUSB=y/g' out/.config
           
-          # 4. Sinkronisasi dependensi Kconfig otomatis
+          # Tambahan driver HCIUART spesifik (untuk chip internal SoC Qualcomm/MediaTek)
+          sed -i 's/# CONFIG_BT_HCIUART_H4 is not set/CONFIG_BT_HCIUART_H4=y/g' out/.config
+          sed -i 's/# CONFIG_BT_HCIUART_BCSP is not set/CONFIG_BT_HCIUART_BCSP=y/g' out/.config
+          sed -i 's/# CONFIG_BT_HCIUART_LL is not set/CONFIG_BT_HCIUART_LL=y/g' out/.config
+          sed -i 's/# CONFIG_BT_HCIUART_3WIRE is not set/CONFIG_BT_HCIUART_3WIRE=y/g' out/.config
+          sed -i 's/# CONFIG_BT_HCIUART_QCA is not set/CONFIG_BT_HCIUART_QCA=y/g' out/.config
+          
+          # 5. Sinkronisasi dependensi Kconfig otomatis
           make O=out olddefconfig
           
-          # 5. Jalankan kompilasi kernel utama dan seluruh file modul eksternal .ko
+          # 6. Jalankan kompilasi kernel utama dan seluruh file modul eksternal .ko
           make -j$(nproc) O=out \
             ARCH=arm64 \
             CROSS_COMPILE=aarch64-linux-gnu- \
@@ -74,11 +90,11 @@ jobs:
           
           # 4. Bungkus paket instalasi menjadi ZIP
           cd anykernel
-          zip -r9 ../NetHunter-Fog-AR9271-Kernel.zip * -x .git README.md
+          zip -r9 ../NetHunter-Fog-BT-Arsenal-Kernel.zip * -x .git README.md
           
       - name: Upload Kernel ZIP Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: NetHunter-Fog-AR9271-Kernel
-          path: NetHunter-Fog-AR9271-Kernel.zip
+          name: NetHunter-Fog-BT-Arsenal-Kernel
+          path: NetHunter-Fog-BT-Arsenal-Kernel.zip
           
