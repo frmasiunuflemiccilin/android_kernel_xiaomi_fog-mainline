@@ -45,9 +45,8 @@ jobs:
           sed -i 's/CONFIG_MT76_CORE=y/CONFIG_MT76_CORE=m/g' out/.config
           sed -i 's/CONFIG_MT76_USB=y/CONFIG_MT76_USB=m/g' out/.config
 
-          # 4. Aktifkan Subsistem Bluetooth & Bluetooth Arsenal secara paksa sebagai Modul (=m)
-          # Gunakan langsung scripts/config tanpa python3 karena ini adalah file bash script
-          ./scripts/config --file out/.config -m CONFIG_BT
+          # Menyuntikkan konfigurasi Bluetooth secara otomatis lewat YAML
+          ./scripts/config --file out/.config -e CONFIG_BT
           ./scripts/config --file out/.config -m CONFIG_BT_RFCOMM
           ./scripts/config --file out/.config -m CONFIG_BT_BNEP
           ./scripts/config --file out/.config -m CONFIG_BT_HIDP
@@ -58,6 +57,7 @@ jobs:
           ./scripts/config --file out/.config -m CONFIG_BT_HCIUART_LL
           ./scripts/config --file out/.config -m CONFIG_BT_HCIUART_3WIRE
           ./scripts/config --file out/.config -m CONFIG_BT_HCIUART_QCA
+
           
           # 5. Sinkronisasi dependensi Kconfig otomatis
           make O=out ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- CROSS_COMPILE_ARM32=arm-linux-gnueabi- olddefconfig
