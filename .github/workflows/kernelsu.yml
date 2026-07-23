@@ -46,17 +46,18 @@ jobs:
           sed -i 's/CONFIG_MT76_USB=y/CONFIG_MT76_USB=m/g' out/.config
 
           # 4. Aktifkan Subsistem Bluetooth & Bluetooth Arsenal secara paksa sebagai Modul (=m)
-          python3 scripts/config --file out/.config -m CONFIG_BT
-          python3 scripts/config --file out/.config -m CONFIG_BT_RFCOMM
-          python3 scripts/config --file out/.config -m CONFIG_BT_BNEP
-          python3 scripts/config --file out/.config -m CONFIG_BT_HIDP
-          python3 scripts/config --file out/.config -m CONFIG_BT_HCIUART
-          python3 scripts/config --file out/.config -m CONFIG_BT_HCIBTUSB
-          python3 scripts/config --file out/.config -m CONFIG_BT_HCIUART_H4
-          python3 scripts/config --file out/.config -m CONFIG_BT_HCIUART_BCSP
-          python3 scripts/config --file out/.config -m CONFIG_BT_HCIUART_LL
-          python3 scripts/config --file out/.config -m CONFIG_BT_HCIUART_3WIRE
-          python3 scripts/config --file out/.config -m CONFIG_BT_HCIUART_QCA
+          # Gunakan langsung scripts/config tanpa python3 karena ini adalah file bash script
+          ./scripts/config --file out/.config -m CONFIG_BT
+          ./scripts/config --file out/.config -m CONFIG_BT_RFCOMM
+          ./scripts/config --file out/.config -m CONFIG_BT_BNEP
+          ./scripts/config --file out/.config -m CONFIG_BT_HIDP
+          ./scripts/config --file out/.config -m CONFIG_BT_HCIUART
+          ./scripts/config --file out/.config -m CONFIG_BT_HCIBTUSB
+          ./scripts/config --file out/.config -m CONFIG_BT_HCIUART_H4
+          ./scripts/config --file out/.config -m CONFIG_BT_HCIUART_BCSP
+          ./scripts/config --file out/.config -m CONFIG_BT_HCIUART_LL
+          ./scripts/config --file out/.config -m CONFIG_BT_HCIUART_3WIRE
+          ./scripts/config --file out/.config -m CONFIG_BT_HCIUART_QCA
           
           # 5. Sinkronisasi dependensi Kconfig otomatis
           make O=out ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- CROSS_COMPILE_ARM32=arm-linux-gnueabi- olddefconfig
