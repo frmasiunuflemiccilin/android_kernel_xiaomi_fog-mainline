@@ -31,7 +31,7 @@ jobs:
           export SUBARCH=arm64
           
           # 1. Ekstrak defconfig dasar bawaan vendor
-          make O=out vendor/fog-perf_defconfig
+          make O=out vendor/fog-perf_defconfig || make O=out fog-perf_defconfig
           
           # 2. Kembalikan status Atheros AR9271 menjadi Built-in (=y)
           sed -i 's/CONFIG_ATH_CARDS=m/CONFIG_ATH_CARDS=y/g' out/.config || echo 'CONFIG_ATH_CARDS=y' >> out/.config
@@ -45,24 +45,21 @@ jobs:
           sed -i 's/CONFIG_MT76_CORE=y/CONFIG_MT76_CORE=m/g' out/.config
           sed -i 's/CONFIG_MT76_USB=y/CONFIG_MT76_USB=m/g' out/.config
 
-          # 4. Aktifkan Subsistem Bluetooth & Bluetooth Arsenal (Internal & Eksternal)
-          sed -i 's/# CONFIG_BT is not set/CONFIG_BT=y/g' out/.config
-          sed -i 's/CONFIG_BT=m/CONFIG_BT=y/g' out/.config
-          sed -i 's/# CONFIG_BT_RFCOMM is not set/CONFIG_BT_RFCOMM=y/g' out/.config
-          sed -i 's/# CONFIG_BT_BNEP is not set/CONFIG_BT_BNEP=y/g' out/.config
-          sed -i 's/# CONFIG_BT_HIDP is not set/CONFIG_BT_HIDP=y/g' out/.config
-          sed -i 's/# CONFIG_BT_HCIUART is not set/CONFIG_BT_HCIUART=y/g' out/.config
-          sed -i 's/# CONFIG_BT_HCIBTUSB is not set/CONFIG_BT_HCIBTUSB=y/g' out/.config
-          
-          # Tambahan driver HCIUART spesifik (untuk chip internal SoC Qualcomm/MediaTek)
-          sed -i 's/# CONFIG_BT_HCIUART_H4 is not set/CONFIG_BT_HCIUART_H4=y/g' out/.config
-          sed -i 's/# CONFIG_BT_HCIUART_BCSP is not set/CONFIG_BT_HCIUART_BCSP=y/g' out/.config
-          sed -i 's/# CONFIG_BT_HCIUART_LL is not set/CONFIG_BT_HCIUART_LL=y/g' out/.config
-          sed -i 's/# CONFIG_BT_HCIUART_3WIRE is not set/CONFIG_BT_HCIUART_3WIRE=y/g' out/.config
-          sed -i 's/# CONFIG_BT_HCIUART_QCA is not set/CONFIG_BT_HCIUART_QCA=y/g' out/.config
+          # 4. Aktifkan Subsistem Bluetooth & Bluetooth Arsenal secara paksa sebagai Modul (=m)
+          python3 scripts/config --file out/.config -m CONFIG_BT
+          python3 scripts/config --file out/.config -m CONFIG_BT_RFCOMM
+          python3 scripts/config --file out/.config -m CONFIG_BT_BNEP
+          python3 scripts/config --file out/.config -m CONFIG_BT_HIDP
+          python3 scripts/config --file out/.config -m CONFIG_BT_HCIUART
+          python3 scripts/config --file out/.config -m CONFIG_BT_HCIBTUSB
+          python3 scripts/config --file out/.config -m CONFIG_BT_HCIUART_H4
+          python3 scripts/config --file out/.config -m CONFIG_BT_HCIUART_BCSP
+          python3 scripts/config --file out/.config -m CONFIG_BT_HCIUART_LL
+          python3 scripts/config --file out/.config -m CONFIG_BT_HCIUART_3WIRE
+          python3 scripts/config --file out/.config -m CONFIG_BT_HCIUART_QCA
           
           # 5. Sinkronisasi dependensi Kconfig otomatis
-          make O=out olddefconfig
+          make O=out ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- CROSS_COMPILE_ARM32=arm-linux-gnueabi- olddefconfig
           
           # 6. Jalankan kompilasi kernel utama dan seluruh file modul eksternal .ko
           make -j$(nproc) O=out \
@@ -84,9 +81,10 @@ jobs:
             cp out/arch/arm64/boot/Image anykernel/
           fi
           
-          # 3. Kumpulkan sisa berkas modul .ko (seperti MediaTek) ke folder /modules
+          # 3. Kumpulkan seluruh berkas modul .ko (Wireless & Bluetooth) ke folder /modules
           mkdir -p anykernel/modules/system/lib/modules
           find out/drivers/net/wireless/ -name "*.ko" -exec cp {} anykernel/modules/system/lib/modules/ \;
+          find out/drivers/bluetooth/ -name "*.ko" -exec cp {} anykernel/modules/system/lib/modules/ \; 2>/dev/null || true
           
           # 4. Bungkus paket instalasi menjadi ZIP
           cd anykernel
