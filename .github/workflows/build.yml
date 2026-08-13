@@ -11,20 +11,32 @@ jobs:
     steps:
       - name: Checkout Kernel Source
         uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          fetch-depth: 0
 
       - name: Install Build Dependencies & Toolchains
         run: |
           sudo apt-get update
           sudo apt-get install -y build-essential bc bison flex libssl-dev libncurses-dev git wget python3 zip curl gcc-aarch64-linux-gnu gcc-arm-linux-gnueabi
 
-      - name: Inject KernelSU-Next Source (Legacy Mode)
+      - name: Setup KernelSU / KernelSU-Next Source
         run: |
-          # Mengunduh KernelSU-Next branch legacy untuk Kernel 4.19 (Non-GKI)
+          # Hapus peninggalan submodule/folder mati jika ada
+          rm -rf drivers/kernelsu drivers/KernelSU KernelSU KernelSU-Next
+          
+          # Inject KernelSU-Next Legacy khusus untuk Kernel 4.19
           curl -LSs "https://raw.githubusercontent.com/KernelSU-Next/KernelSU-Next/next/kernel/setup.sh" | bash -s legacy
+          
+          # Biar Kconfig huruf kecil/besar aman, buatkan symlink jika diperlukan
+          if [ -d "drivers/KernelSU" ] && [ ! -d "drivers/kernelsu" ]; then
+            ln -sf KernelSU drivers/kernelsu
+          elif [ -d "drivers/kernelsu" ] && [ ! -d "drivers/KernelSU" ]; then
+            ln -sf kernelsu drivers/KernelSU
+          fi
 
       - name: Fix Ath9k HTC Conflict & Qualcomm L2 Counters
         run: |
-          # Perbaikan konflik fungsi teks penamaan
           sed -i 's/htc_start/ath9k_htc_start/g' drivers/net/wireless/ath/ath9k/*.{c,h} 2>/dev/null || true
           sed -i 's/htc_stop/ath9k_htc_stop/g' drivers/net/wireless/ath/ath9k/*.{c,h} 2>/dev/null || true
           sed -i 's/htc_connect_service/ath9k_htc_connect_service/g' drivers/net/wireless/ath/ath9k/*.{c,h} 2>/dev/null || true
@@ -35,25 +47,20 @@ jobs:
           export ARCH=arm64
           export SUBARCH=arm64
           
-          # 1. Ekstrak defconfig yang SUDAH kamu edit langsung di GitHub
           make O=out vendor/fog-perf_defconfig || make O=out fog-perf_defconfig
           
-          # 2. Kembalikan status Atheros AR9271 menjadi Built-in (=y)
           sed -i 's/CONFIG_ATH_CARDS=m/CONFIG_ATH_CARDS=y/g' out/.config || echo 'CONFIG_ATH_CARDS=y' >> out/.config
           sed -i 's/CONFIG_ATH9K=m/CONFIG_ATH9K=y/g' out/.config || echo 'CONFIG_ATH9K=y' >> out/.config
           sed -i 's/CONFIG_ATH9K_HW=m/CONFIG_ATH9K_HW=y/g' out/.config || echo 'CONFIG_ATH9K_HW=y' >> out/.config
           sed -i 's/CONFIG_ATH9K_COMMON=m/CONFIG_ATH9K_COMMON=y/g' out/.config || echo 'CONFIG_ATH9K_COMMON=y' >> out/.config
           sed -i 's/CONFIG_ATH9K_HTC=m/CONFIG_ATH9K_HTC=y/g' out/.config || echo 'CONFIG_ATH9K_HTC=y' >> out/.config
           
-          # 3. Pastikan MediaTek MT7601U Tetap Berstatus Modul (=m)
           sed -i 's/CONFIG_MT7601U=y/CONFIG_MT7601U=m/g' out/.config
           sed -i 's/CONFIG_MT76_CORE=y/CONFIG_MT76_CORE=m/g' out/.config
           sed -i 's/CONFIG_MT76_USB=y/CONFIG_MT76_USB=m/g' out/.config
 
-          # 4. Sinkronisasi dependensi Kconfig otomatis
           make O=out ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- CROSS_COMPILE_ARM32=arm-linux-gnueabi- olddefconfig
           
-          # 5. Jalankan kompilasi kernel utama dan seluruh file modul eksternal .ko
           make -j$(nproc) O=out \
             ARCH=arm64 \
             CROSS_COMPILE=aarch64-linux-gnu- \
@@ -61,10 +68,8 @@ jobs:
 
       - name: Package with AnyKernel3
         run: |
-          # 1. Klon repositori dasar AnyKernel3 resmi
           git clone https://github.com/osm0sis/AnyKernel3.git -b master anykernel
           
-          # 2. Pindahkan berkas gambar kernel utama hasil kompilasi bersih
           if [ -f "out/arch/arm64/boot/Image.gz-dtb" ]; then
             cp out/arch/arm64/boot/Image.gz-dtb anykernel/
           elif [ -f "out/arch/arm64/boot/Image.gz" ]; then
@@ -73,12 +78,10 @@ jobs:
             cp out/arch/arm64/boot/Image anykernel/
           fi
           
-          # 3. Kumpulkan seluruh berkas modul .ko (Wireless & Bluetooth) ke folder /modules
           mkdir -p anykernel/modules/system/lib/modules
           find out/drivers/net/wireless/ -name "*.ko" -exec cp {} anykernel/modules/system/lib/modules/ \;
           find out/drivers/bluetooth/ -name "*.ko" -exec cp {} anykernel/modules/system/lib/modules/ \; 2>/dev/null || true
           
-          # 4. Bungkus paket instalasi menjadi ZIP
           cd anykernel
           zip -r9 ../NetHunter-Fog-BT-Arsenal-Kernel.zip * -x .git README.md
 
