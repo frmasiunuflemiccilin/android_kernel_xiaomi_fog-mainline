@@ -1,76 +1,90 @@
-name: Build Obsidian Kernel (Fog - KSU + NetHunter)
+name: Build NetHunter Fog with AR9271, MT7601U & BT Arsenal
 
 on:
+  push:
+    branches: [ main, master ]
   workflow_dispatch:
 
 jobs:
   build:
-    name: Compile & Pack Kernel
-    runs-on: ubuntu-22.04
-
+    runs-on: ubuntu-latest
     steps:
-    - name: Mengunduh Source Code Kernel
-      uses: actions/checkout@v4
+      - name: Checkout Kernel Source
+        uses: actions/checkout@v4
 
-    - name: Menyiapkan Lingkungan Build (Dependencies)
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y bc bison build-essential ccache curl flex g++-multilib gcc-multilib git gnupg gperf imagemagick lib32ncurses5-dev lib32readline-dev lib32z1-dev liblz4-tool libncurses5 libncurses5-dev libsdl1.2-dev libssl-dev libxml2 libxml2-utils lzop pngcrush rsync schedtool squashfs-tools xsltproc zip zlib1g-dev python3
+      - name: Install Build Dependencies & Toolchains
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential bc bison flex libssl-dev libncurses-dev git wget python3 zip curl gcc-aarch64-linux-gnu gcc-arm-linux-gnueabi
 
-    - name: Mengunduh Proton-Clang Toolchain
-      run: |
-        git clone --depth=1 https://github.com/kdrag0n/proton-clang.git clang
+      - name: Inject KernelSU-Next Source (Legacy Mode)
+        run: |
+          # Mengunduh KernelSU-Next branch legacy untuk Kernel 4.19 (Non-GKI)
+          curl -LSs "https://raw.githubusercontent.com/KernelSU-Next/KernelSU-Next/next/kernel/setup.sh" | bash -s legacy
 
-    - name: Mulai Kompilasi Kernel
-      run: |
-        export PATH="$GITHUB_WORKSPACE/clang/bin:$PATH"
-        export ARCH=arm64
-        export SUBARCH=arm64
-        
-        # Membersihkan sisa build
-        make O=out clean
-        make O=out mrproper
+      - name: Fix Ath9k HTC Conflict & Qualcomm L2 Counters
+        run: |
+          # Perbaikan konflik fungsi teks penamaan
+          sed -i 's/htc_start/ath9k_htc_start/g' drivers/net/wireless/ath/ath9k/*.{c,h} 2>/dev/null || true
+          sed -i 's/htc_stop/ath9k_htc_stop/g' drivers/net/wireless/ath/ath9k/*.{c,h} 2>/dev/null || true
+          sed -i 's/htc_connect_service/ath9k_htc_connect_service/g' drivers/net/wireless/ath/ath9k/*.{c,h} 2>/dev/null || true
+          sed -i 's/%[lid]/%u/g' drivers/perf/qcom_l2_counters.c 2>/dev/null || true
 
-        # Memuat konfigurasi defconfig Fog
-        make O=out ARCH=arm64 vendor/fog-perf_defconfig
+      - name: Compile Kernel
+        run: |
+          export ARCH=arm64
+          export SUBARCH=arm64
+          
+          # 1. Ekstrak defconfig yang SUDAH kamu edit langsung di GitHub
+          make O=out vendor/fog-perf_defconfig || make O=out fog-perf_defconfig
+          
+          # 2. Kembalikan status Atheros AR9271 menjadi Built-in (=y)
+          sed -i 's/CONFIG_ATH_CARDS=m/CONFIG_ATH_CARDS=y/g' out/.config || echo 'CONFIG_ATH_CARDS=y' >> out/.config
+          sed -i 's/CONFIG_ATH9K=m/CONFIG_ATH9K=y/g' out/.config || echo 'CONFIG_ATH9K=y' >> out/.config
+          sed -i 's/CONFIG_ATH9K_HW=m/CONFIG_ATH9K_HW=y/g' out/.config || echo 'CONFIG_ATH9K_HW=y' >> out/.config
+          sed -i 's/CONFIG_ATH9K_COMMON=m/CONFIG_ATH9K_COMMON=y/g' out/.config || echo 'CONFIG_ATH9K_COMMON=y' >> out/.config
+          sed -i 's/CONFIG_ATH9K_HTC=m/CONFIG_ATH9K_HTC=y/g' out/.config || echo 'CONFIG_ATH9K_HTC=y' >> out/.config
+          
+          # 3. Pastikan MediaTek MT7601U Tetap Berstatus Modul (=m)
+          sed -i 's/CONFIG_MT7601U=y/CONFIG_MT7601U=m/g' out/.config
+          sed -i 's/CONFIG_MT76_CORE=y/CONFIG_MT76_CORE=m/g' out/.config
+          sed -i 's/CONFIG_MT76_USB=y/CONFIG_MT76_USB=m/g' out/.config
 
-        # Eksekusi kompilasi
-        make -j$(nproc --all) O=out ARCH=arm64 CC=clang \
-             CROSS_COMPILE=aarch64-linux-gnu- \
-             CROSS_COMPILE_ARM32=arm-linux-gnueabi-
+          # 4. Sinkronisasi dependensi Kconfig otomatis
+          make O=out ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- CROSS_COMPILE_ARM32=arm-linux-gnueabi- olddefconfig
+          
+          # 5. Jalankan kompilasi kernel utama dan seluruh file modul eksternal .ko
+          make -j$(nproc) O=out \
+            ARCH=arm64 \
+            CROSS_COMPILE=aarch64-linux-gnu- \
+            CROSS_COMPILE_ARM32=arm-linux-gnueabi-
 
-    - name: Membungkus dengan AnyKernel3 (Flashable Zip)
-      run: |
-        # Mengunduh AnyKernel3 resmi bawaan osm0sis
-        git clone https://github.com/osm0sis/AnyKernel3.git AnyKernel3
-        cd AnyKernel3
-        
-        # Hapus folder .git
-        rm -rf .git
-        
-        # Pindahkan file kernel (Image/Image.gz-dtb)
-        if [ -f ../out/arch/arm64/boot/Image.gz-dtb ]; then
-          cp ../out/arch/arm64/boot/Image.gz-dtb .
-        elif [ -f ../out/arch/arm64/boot/Image.gz ]; then
-          cp ../out/arch/arm64/boot/Image.gz .
-        elif [ -f ../out/arch/arm64/boot/Image ]; then
-          cp ../out/arch/arm64/boot/Image .
-        fi
-        
-        # Pindahkan dtb / dtbo jika ada
-        if [ -f ../out/arch/arm64/boot/dtbo.img ]; then
-          cp ../out/arch/arm64/boot/dtbo.img .
-        fi
-        if [ -f ../out/arch/arm64/boot/dtb.img ]; then
-          cp ../out/arch/arm64/boot/dtb.img .
-        fi
+      - name: Package with AnyKernel3
+        run: |
+          # 1. Klon repositori dasar AnyKernel3 resmi
+          git clone https://github.com/osm0sis/AnyKernel3.git -b master anykernel
+          
+          # 2. Pindahkan berkas gambar kernel utama hasil kompilasi bersih
+          if [ -f "out/arch/arm64/boot/Image.gz-dtb" ]; then
+            cp out/arch/arm64/boot/Image.gz-dtb anykernel/
+          elif [ -f "out/arch/arm64/boot/Image.gz" ]; then
+            cp out/arch/arm64/boot/Image.gz anykernel/
+          elif [ -f "out/arch/arm64/boot/Image" ]; then
+            cp out/arch/arm64/boot/Image anykernel/
+          fi
+          
+          # 3. Kumpulkan seluruh berkas modul .ko (Wireless & Bluetooth) ke folder /modules
+          mkdir -p anykernel/modules/system/lib/modules
+          find out/drivers/net/wireless/ -name "*.ko" -exec cp {} anykernel/modules/system/lib/modules/ \;
+          find out/drivers/bluetooth/ -name "*.ko" -exec cp {} anykernel/modules/system/lib/modules/ \; 2>/dev/null || true
+          
+          # 4. Bungkus paket instalasi menjadi ZIP
+          cd anykernel
+          zip -r9 ../NetHunter-Fog-BT-Arsenal-Kernel.zip * -x .git README.md
 
-        # Membuat file zip akhir
-        zip -r9 ../Obsidian-Kernel-Fog-NH-KSU.zip * -x .git README.md *placeholder
-
-    - name: Mengunggah Hasil Akhir (Flashable Zip)
-      uses: actions/upload-artifact@v4
-      with:
-        name: Obsidian-Kernel-Fog-Flashable-Zip
-        path: Obsidian-Kernel-Fog-NH-KSU.zip
-        
+      - name: Upload Kernel ZIP Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: NetHunter-Fog-BT-Arsenal-Kernel
+          path: NetHunter-Fog-BT-Arsenal-Kernel.zip
+          
