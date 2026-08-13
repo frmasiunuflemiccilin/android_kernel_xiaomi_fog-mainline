@@ -12,8 +12,7 @@ jobs:
       - name: Checkout Kernel Source
         uses: actions/checkout@v4
         with:
-          submodules: recursive
-          fetch-depth: 0
+          submodules: false
 
       - name: Install Build Dependencies & Toolchains
         run: |
@@ -22,13 +21,13 @@ jobs:
 
       - name: Setup KernelSU / KernelSU-Next Source
         run: |
-          # Hapus peninggalan submodule/folder mati jika ada
+          # Hapus peninggalan folder/submodule KSU jika ada
           rm -rf drivers/kernelsu drivers/KernelSU KernelSU KernelSU-Next
           
           # Inject KernelSU-Next Legacy khusus untuk Kernel 4.19
           curl -LSs "https://raw.githubusercontent.com/KernelSU-Next/KernelSU-Next/next/kernel/setup.sh" | bash -s legacy
           
-          # Biar Kconfig huruf kecil/besar aman, buatkan symlink jika diperlukan
+          # Pastikan Kconfig bisa dibaca baik huruf besar maupun kecil
           if [ -d "drivers/KernelSU" ] && [ ! -d "drivers/kernelsu" ]; then
             ln -sf KernelSU drivers/kernelsu
           elif [ -d "drivers/kernelsu" ] && [ ! -d "drivers/KernelSU" ]; then
@@ -90,4 +89,5 @@ jobs:
         with:
           name: NetHunter-Fog-BT-Arsenal-Kernel
           path: NetHunter-Fog-BT-Arsenal-Kernel.zip
-          
+
+        
